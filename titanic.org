@@ -1,0 +1,499 @@
+#+TITLE: Titanic Kaggle Competition
+#+AUTHOR: Nikola Stoyanov
+#+EMAIL: nikola.stoyanov@postgrad.manchester.ac.uk
+#+DATE:
+#+STARTUP: showall
+#+STARTUP: inlineimages
+#+STARTUP: showstars
+
+#+BEGIN_PREVIEW
+Keywords: Data Science, Kaggle, Machine Learning, Python
+#+END_PREVIEW
+
+* TODO Introduction
+
+* DONE Data Exploration
+
+** DONE Imports
+Set the correct python environment for this problem.
+#+BEGIN_SRC emacs-lisp
+(setenv "PYTHONPATH" "~/anaconda3/envs/py36/bin/python")
+#+END_SRC
+
+#+RESULTS:
+: ~/anaconda3/envs/py36/bin/python
+
+We are going to use scipy for the data fit and seaborn for the visualization.
+#+BEGIN_SRC ipython :exports both :async t :results output :session
+import seaborn as sns
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+sns.set(color_codes=True)
+#+END_SRC
+
+#+RESULTS:
+
+** TODO Data Cleaning
+Import to files.
+#+BEGIN_SRC ipython :exports both :async t :results output :session
+train_data = pd.read_csv('~/git/kaggle-titanic/data/train.csv')
+test_data = pd.read_csv('~/git/kaggle-titanic/data/test.csv')
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC ipython :exports both :async t :results table :session
+train_data.head()
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+# Out[5]:
+#+BEGIN_EXAMPLE
+  PassengerId  Survived  Pclass  \
+  0            1         0       3
+  1            2         1       1
+  2            3         1       3
+  3            4         1       1
+  4            5         0       3
+  
+  Name     Sex   Age  SibSp  \
+  0                            Braund, Mr. Owen Harris    male  22.0      1
+  1  Cumings, Mrs. John Bradley (Florence Briggs Th...  female  38.0      1
+  2                             Heikkinen, Miss. Laina  female  26.0      0
+  3       Futrelle, Mrs. Jacques Heath (Lily May Peel)  female  35.0      1
+  4                           Allen, Mr. William Henry    male  35.0      0
+  
+  Parch            Ticket     Fare Cabin Embarked
+  0      0         A/5 21171   7.2500   NaN        S
+  1      0          PC 17599  71.2833   C85        C
+  2      0  STON/O2. 3101282   7.9250   NaN        S
+  3      0            113803  53.1000  C123        S
+  4      0            373450   8.0500   NaN        S
+#+END_EXAMPLE
+#+end_example
+
+As we can see the data has quite a few not a number values. We would need to clean it,
+but first lets see how much of the data is actually NaN.
+
+#+BEGIN_SRC ipython :exports both :async t :results both :session
+(len(train_data) - train_data.count()) / len(train_data)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+# Out[6]:
+#+BEGIN_EXAMPLE
+  PassengerId    0.000000
+  Survived       0.000000
+  Pclass         0.000000
+  Name           0.000000
+  Sex            0.000000
+  Age            0.198653
+  SibSp          0.000000
+  Parch          0.000000
+  Ticket         0.000000
+  Fare           0.000000
+  Cabin          0.771044
+  Embarked       0.002245
+  dtype: float64
+#+END_EXAMPLE
+#+end_example
+
+As can be see 77% of the data in the Cabin column in NaN, 20% is in Age and a few entries in Embarked.
+The rest is clean.
+
+Considering this, the approach which we undertake is to remove the Cabin column and drop the NaN values
+from the Age and Embarked columns.
+
+#+BEGIN_SRC ipython :exports both :async t :results table :session
+train_data = train_data.drop(['Cabin'], axis=1)
+train_data = train_data.dropna(subset=['Age', 'Embarked'])
+(len(train_data) - train_data.count()) / len(train_data)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+# Out[7]:
+#+BEGIN_EXAMPLE
+  PassengerId    0.0
+  Survived       0.0
+  Pclass         0.0
+  Name           0.0
+  Sex            0.0
+  Age            0.0
+  SibSp          0.0
+  Parch          0.0
+  Ticket         0.0
+  Fare           0.0
+  Embarked       0.0
+  dtype: float64
+#+END_EXAMPLE
+
+The train data is clean. Lets check out test data now.
+
+#+BEGIN_SRC ipython :exports both :async t :results table :session
+test_data.head()
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+# Out[8]:
+#+BEGIN_EXAMPLE
+  PassengerId  Pclass                                          Name     Sex  \
+  0          892       3                              Kelly, Mr. James    male
+  1          893       3              Wilkes, Mrs. James (Ellen Needs)  female
+  2          894       2                     Myles, Mr. Thomas Francis    male
+  3          895       3                              Wirz, Mr. Albert    male
+  4          896       3  Hirvonen, Mrs. Alexander (Helga E Lindqvist)  female
+  
+  Age  SibSp  Parch   Ticket     Fare Cabin Embarked
+  0  34.5      0      0   330911   7.8292   NaN        Q
+  1  47.0      1      0   363272   7.0000   NaN        S
+  2  62.0      0      0   240276   9.6875   NaN        Q
+  3  27.0      0      0   315154   8.6625   NaN        S
+  4  22.0      1      1  3101298  12.2875   NaN        S
+#+END_EXAMPLE
+#+end_example
+
+#+BEGIN_SRC ipython :session :ipyfile /tmp/image.png :exports both :async t :results raw drawer
+(len(test_data) - test_data.count()) / len(test_data)
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[183]:
+#+BEGIN_EXAMPLE
+  PassengerId    0.000000
+  Pclass         0.000000
+  Name           0.000000
+  Sex            0.000000
+  Age            0.205742
+  SibSp          0.000000
+  Parch          0.000000
+  Ticket         0.000000
+  Fare           0.002392
+  Cabin          0.782297
+  Embarked       0.000000
+  dtype: float64
+#+END_EXAMPLE
+:END:
+
+** TODO Data Standartisation
+
+During the data exploration we noticed that some of the values are categorical i.e.
+male/female. To facilitate the use of this date in machine learning models we need to
+encode the data with a method such as the one-hot encoder.
+
+For this we can use the preprocessing module of scikit. Lets see again
+which columns would require an encoding.
+#+BEGIN_SRC ipython :exports both :async t :result table :session
+from sklearn import preprocessing
+
+train_data.columns
+#+END_SRC
+
+#+RESULTS:
+: # Out[14]:
+: #+BEGIN_EXAMPLE
+:   Index(['PassengerId', 'Survived', 'Pclass', 'Name', 'Sex', 'Age', 'SibSp',
+:   'Parch', 'Ticket', 'Fare', 'Embarked'],
+:   dtype='object')
+: #+END_EXAMPLE
+
+It seems that we would need to encode the columns: 'Sex', 'Parch' and 'Embarked'.
+
+First lets place integer labels for the categorical data.
+#+BEGIN_SRC ipython :exports both :async t :results table :session
+enc_labels = preprocessing.LabelEncoder()
+training_cat_labels = train_data[['Sex', 'Parch', 'Embarked']].apply(enc_labels.fit_transform)
+testing_cat_labels = test_data[['Sex', 'Parch', 'Embarked']].apply(enc_labels.fit_transform)
+training_cat_labels.head()
+#+END_SRC
+
+#+RESULTS:
+: # Out[21]:
+: #+BEGIN_EXAMPLE
+:   Sex  Parch  Embarked
+:   0    1      0         2
+:   1    0      0         0
+:   2    0      0         2
+:   3    0      0         2
+:   4    1      0         2
+: #+END_EXAMPLE
+
+For SVM we would also need to use the one hot encoder.
+
+#+BEGIN_SRC ipython :exports both :async t :results table :session
+onehot = preprocessing.OneHotEncoder()
+
+onehot.fit(training_cat_labels)
+onehot_labels = onehot.transform(training_cat_labels).toarray()
+onehot_labels
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+# Out[23]:
+#+BEGIN_EXAMPLE
+  array([[0., 1., 1., ..., 0., 0., 1.],
+  [1., 0., 1., ..., 1., 0., 0.],
+  [1., 0., 1., ..., 0., 0., 1.],
+  ...,
+  [1., 0., 1., ..., 0., 0., 1.],
+  [0., 1., 1., ..., 1., 0., 0.],
+  [0., 1., 1., ..., 0., 1., 0.]])
+#+END_EXAMPLE
+#+end_example
+
+#+end_example
+
+The labels to make sense - we now have discrete integer values for the
+categorical features! Next lets create the one-hot encoder and
+transform the values.
+
+*** TODO Make the data to a gaussian with zero mean and unit variance.
+** TODO Analysis
+Lets explore some of the data to get a sense of what is going on. We are going to look at the age, male/female, ticket fare, embarkment city and
+family data and how it relates to survivability.
+
+*** Age
+We can start by exporing the relationship between age and survivability. We can make a null hypothesis assumption that
+the younger you are the more chance you have of survival. Lets see if this statement makes sense.
+
+We can do this by plotting the histograms of survival (0/1) for age and then compare the kernel density estimate (KDE).
+From the KDE we can estimate the probability density function (PDF) of the random variable we are exploring.
+
+Lets plot the histograms. First the total distribution of all passangers and then the passangers than survived.
+#+BEGIN_SRC ipython :session :ipyfile img/sns_dist_age.png :exports both :async t :results raw drawer
+fig = plt.figure()
+sns.distplot(train_data['Age'], bins=20, kde=False)
+fig.tight_layout()
+plt.show()
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[172]:
+[[file:img/sns_dist_age.png]]
+:END:
+
+#+BEGIN_SRC ipython :session :ipyfile img/sns_dist_age_surv1.png :exports both :async t :results raw drawer
+fig = plt.figure()
+sns.distplot(train_data['Age'][train_data['Survived'] == 1], bins=20, kde=False)
+fig.tight_layout()
+plt.show()
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[173]:
+[[file:img/sns_dist_age_surv1.png]]
+:END:
+
+#+LATEX_ATTR: :placement [H]
+#+CAPTION: Age histogram of Survival = 1 from train data
+#+NAME: sns_dist_age_surv1
+To compute the KDE seaborn will put a Gaussian distribution centered at each bin and then
+sum them. It will then normalize the result so that the integral is 1. In a way it will
+smooth the data - this is determined by the bandwith parameter (bw in python). This is what controls
+the trade-off between the bias and variance of the estimator. We are going to leave the default bandwith here.
+
+Lets plot the two KDE and compare them.
+
+#+BEGIN_SRC ipython :session :ipyfile img/sns_kde_age.png :exports both :async t :results raw drawer
+fig = plt.figure()
+sns.kdeplot(train_data['Age'], label='Total')
+sns.kdeplot(train_data['Age'][train_data['Survived'] == 1], label='Survived = 1')
+fig.tight_layout()
+plt.show()
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[174]:
+[[file:img/sns_kde_age.png]]
+:END:
+
+The integral of both curves is 1 so we can directly compare them. From the plot we can do a quick qualitative comparison (high/low)
+and what we can see is that:
+
+- Age < 10 (Group 1): High proportion survived,
+- 10 < Age < 30 (Group 2): Low proportion survived,
+- 30 < Age < 60 (Group 3): High proportion survived,
+- Age > 60 (Group 4): Low proportion survived.
+
+What this data tells us is that survivability is correlated with age in a categorical manner and not absolute. Or in other words
+people in Group 1 were prioratised, Group 2 and 3 were not prioratised and Group 4 was in between. This statement certainly makes sense,
+however, we need to look into the male/female distribution and the family relations in order to comment more.
+
+*** Male/Female
+Next
+
+*** Family
+
+*** Ticket Fare
+#+BEGIN_SRC ipython :session :ipyfile img/ticket_price_age.png :exports both :async t :results raw drawer
+fig = plt.figure()
+sns.jointplot(data=train_data, x='Age', y='Fare', kind='reg')
+fig.tight_layout()
+plt.show()
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[175]:
+[[file:img/ticket_price_age.png]]
+:END:
+
+#+BEGIN_SRC ipython :session :ipyfile img/ticket_fare.png :exports both :async t :results raw drawer
+fig = plt.figure()
+g = sns.FacetGrid(train_data, row='Survived', col='Pclass')
+g.map(sns.distplot, "Age")
+fig.tight_layout()
+plt.show()
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[176]:
+[[file:img/ticket_fare.png]]
+:END:
+
+
+*** Correlation
+#+BEGIN_SRC ipython :session :ipyfile img/corr_heatmap.png :exports both :async t :results raw drawer
+fig = plt.figure()
+sns.heatmap(train_data.corr(), annot=True, fmt=".2f")
+fig.tight_layout()
+plt.show()
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[177]:
+[[file:img/corr_heatmap.png]]
+:END:
+
+* TODO Logistic Regression Functions
+Since we are going to explore different classification algorithms
+we need to have easy access to perform the checks. Lets write some
+functions to make this handling easier.
+
+Coolest thing even in org-mode C-c ' will open a crazy cool buffer to edit code.
+
+#+BEGIN_SRC ipython :exports both :async t :results output :session
+  def make_meshgrid(x_data, y_data, h_step=0.02):
+      """ Create a grid of points. From:
+      http://scikit-learn.org/stable/auto_examples/svm/plot_iris.html
+
+      Args:
+          x: data to base x-axis meshgrid on
+          y: data to base y-axis meshgrid on
+          h: step size
+
+      Outputs:
+          x_mesh, y_mesh: ndarray with the grid
+      """
+      x_min, x_max = x_data.min() - 1, x_data.max() + 1
+      y_min, y_max = y_data.min() - 1, y_data.max() + 1
+
+      x_mesh, y_mesh = np.meshgrid(np.arange(x_min, x_max, h_step),
+                                   np.arange(y_min, y_max, h_step))
+      return x_mesh, y_mesh
+#+END_SRC
+
+#+RESULTS:
+
+* TODO Support Vector Machines
+From the scikit documentation the C-Support Vector Classification has a
+more than quadratic time complexity for the fit and scaling is difficult
+with datasets of more than $10^4$ samples. Luckily our dataset is much smaller.
+
+#+BEGIN_SRC ipython :exports both :async t :results table :session
+  from sklearn import svm
+
+  clf = svm.SVC()
+  #clf.fit(train_data['Age'].values.reshape(-1, 1), train_data['Survived'].values.reshape(-1, ))
+  #prediction = clf.predict(test_data['Age'].values.reshape(-1, 1))
+  clf.fit(train_data.loc[:, ['Age','Fare', 'Pclass', 'SibSp', 'Sex'], train_data['Survived'].values.reshape(-1, ))
+  #prediction = clf.predict(test_data.loc[:, ['Age', 'Fare']])
+
+  #write this to file
+  #output = test_data.loc[:, ['PassengerId']]
+  #output['Survived'] = prediction
+  #output.to_csv('SVM_age_fare.csv', index=False)
+  #output
+#+END_SRC
+
+#+RESULTS:
+: # Out[180]:
+: #+BEGIN_EXAMPLE
+:   SVC(C=1.0, cache_size=200, class_weight=None, coef0=0.0,
+:   decision_function_shape='ovr', degree=3, gamma='auto', kernel='rbf',
+:   max_iter=-1, probability=False, random_state=None, shrinking=True,
+:   tol=0.001, verbose=False)
+: #+END_EXAMPLE
+
+To submit
+sh :results value
+kaggle competitions submit -c titanic -f SVM_age_fare.csv -m "Trial submission with SVM and two features"
+
+#+RESULTS:
+: Successfully submitted to Titanic: Machine Learning from Disaster
+
+* TODO Random Forests
+
+#+BEGIN_SRC ipython :exports both :async t :results output :session
+from sklearn.ensemble import RandomForestClassifier
+
+clf = RandomForestClassifier(max_depth=2, random_state=0)
+clf.fit(training_cat_labels.loc[:, ['Sex', 'Parch', 'Embarked']], train_data['Survived'].values.reshape(-1, ))
+print(clf.feature_importances_)
+#+END_SRC
+
+#+RESULTS:
+: [0.52487645 0.19963666 0.27548689]
+
+#+BEGIN_SRC ipython :exports both :async t :results output :session
+rf_classifier = clf.predict(testing_cat_labels)
+rf_data = np.vstack((test_data['PassengerId'].values, rf_classifier))
+
+np.savetxt('rf_data.csv', rf_data.T, delimiter=',', fmt='%.f', header='PassengerId,Survived', comments='')
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC sh :results value
+kaggle competitions submit -c titanic -f rf_data.csv -m "Random Forest trial submission"
+#+END_SRC
+
+#+RESULTS:
+| Warning:     | Looks     | like | you're   | using   | an       | outdated | API      | Version, | please | consider | updating | (server | 1.3.8 | / | client | 1.3.6) |
+| Successfully | submitted | to   | Titanic: | Machine | Learning | from     | Disaster |          |        |          |          |         |       |   |        |        |
+
+* Comments
+#+BEGIN_HTM
+<div id='disqus_thread'></div>
+<script>
+    var disqus_config = function () {
+        this.page.url = 'https://niksto.net/titanic.html';
+        this.page.identifier = '7099f7ff-dc02-4829-9064-75875a5daca4';
+        this.page.title = 'Kaggle - Titanic - Data Science';
+    };
+    (function() {
+        var d = document, s = d.createElement('script');
+        s.src = 'https://niksto-net.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>
+    Please enable JavaScript to view the
+    <a href='https://disqus.com/ref_noscript' rel='nofollow'>
+        comments powered by Disqus.
+    </a>
+</noscript>
+#+END_HTM
