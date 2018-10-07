@@ -112,9 +112,29 @@ NaN.
 As can be see 77% of the data in the Cabin column in NaN, 20% is in
 Age and a few entries in Embarked. The rest is clean.
 
-Considering this, the approach which we undertake is to remove the
-Cabin column and drop the NaN values from the Age and Embarked
-columns.
+The available data which exists in the cabin column can introduce bias
+since it is likely to be from survivors. Let us quickly check that
+before we proceed. We are going to test the null hypothesis that there
+is no relationship between survived people and the availability of the
+cabin data. The way we can do this is using a Pearson test.
+
+#+BEGIN_SRC ipython :exports both :async t :results table :session
+  from scipy.stats import pearsonr
+  pearsonr(~train_data[['Cabin']].isnull().values,
+           train_data[['Survived']])
+#+END_SRC
+
+#+RESULTS:
+: # Out[31]:
+: : (array([0.31691152]), array([3.09089104e-22]))
+
+#+end_example
+
+The results is a Pearson $r=0.317$ and a $p=3.09\times10^{-22}$. The
+small $p-value$ indicates that we can confirm the null
+hypothesis. Even though $p-values$ are not very reliable in this small
+range we can confirm this with the rather small Pearson $r$
+coefficient of linear dependency.
 
 #+BEGIN_SRC ipython :exports both :async t :results table :session
 train_data = train_data.drop(['Cabin'], axis=1)
