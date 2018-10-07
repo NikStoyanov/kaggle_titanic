@@ -23,7 +23,8 @@ Set the correct python environment for this problem.
 #+RESULTS:
 : ~/anaconda3/envs/py36/bin/python
 
-We are going to use scipy for the data fit and seaborn for the visualization.
+We are going to use scipy for the data fit and seaborn for the
+visualization.
 #+BEGIN_SRC ipython :exports both :async t :results output :session
 import seaborn as sns
 import pandas as pd
@@ -38,8 +39,8 @@ sns.set(color_codes=True)
 ** TODO Data Cleaning
 Import to files.
 #+BEGIN_SRC ipython :exports both :async t :results output :session
-train_data = pd.read_csv('~/git/kaggle-titanic/data/train.csv')
-test_data = pd.read_csv('~/git/kaggle-titanic/data/test.csv')
+train_data = pd.read_csv('~/git/kaggle_titanic/data/train.csv')
+test_data = pd.read_csv('~/git/kaggle_titanic/data/test.csv')
 #+END_SRC
 
 #+RESULTS:
@@ -50,7 +51,7 @@ train_data.head()
 
 #+RESULTS:
 #+begin_example
-# Out[5]:
+# Out[12]:
 #+BEGIN_EXAMPLE
   PassengerId  Survived  Pclass  \
   0            1         0       3
@@ -75,8 +76,11 @@ train_data.head()
 #+END_EXAMPLE
 #+end_example
 
-As we can see the data has quite a few not a number values. We would need to clean it,
-but first lets see how much of the data is actually NaN.
+#+end_example
+
+As we can see the data has quite a few not a number values. We would
+need to clean it, but first lets see how much of the data is actually
+NaN.
 
 #+BEGIN_SRC ipython :exports both :async t :results both :session
 (len(train_data) - train_data.count()) / len(train_data)
@@ -84,7 +88,7 @@ but first lets see how much of the data is actually NaN.
 
 #+RESULTS:
 #+begin_example
-# Out[6]:
+# Out[13]:
 #+BEGIN_EXAMPLE
   PassengerId    0.000000
   Survived       0.000000
@@ -102,11 +106,15 @@ but first lets see how much of the data is actually NaN.
 #+END_EXAMPLE
 #+end_example
 
-As can be see 77% of the data in the Cabin column in NaN, 20% is in Age and a few entries in Embarked.
-The rest is clean.
+=0 - 0298d237-8808-42e1-83c6-828f8bc054aa
+=#+end_example
 
-Considering this, the approach which we undertake is to remove the Cabin column and drop the NaN values
-from the Age and Embarked columns.
+As can be see 77% of the data in the Cabin column in NaN, 20% is in
+Age and a few entries in Embarked. The rest is clean.
+
+Considering this, the approach which we undertake is to remove the
+Cabin column and drop the NaN values from the Age and Embarked
+columns.
 
 #+BEGIN_SRC ipython :exports both :async t :results table :session
 train_data = train_data.drop(['Cabin'], axis=1)
