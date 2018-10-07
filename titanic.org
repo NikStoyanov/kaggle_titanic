@@ -76,7 +76,34 @@ train_data.head()
 #+END_EXAMPLE
 #+end_example
 
-#+end_example
+#+BEGIN_SRC ipython :exports both :async t :results table :session
+train_data.describe()
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+# Out[33]:
+#+BEGIN_EXAMPLE
+  PassengerId    Survived      Pclass         Age       SibSp  \
+  count   891.000000  891.000000  891.000000  714.000000  891.000000
+  mean    446.000000    0.383838    2.308642   29.699118    0.523008
+  std     257.353842    0.486592    0.836071   14.526497    1.102743
+  min       1.000000    0.000000    1.000000    0.420000    0.000000
+  25%     223.500000    0.000000    2.000000   20.125000    0.000000
+  50%     446.000000    0.000000    3.000000   28.000000    0.000000
+  75%     668.500000    1.000000    3.000000   38.000000    1.000000
+  max     891.000000    1.000000    3.000000   80.000000    8.000000
+  
+  Parch        Fare
+  count  891.000000  891.000000
+  mean     0.381594   32.204208
+  std      0.806057   49.693429
+  min      0.000000    0.000000
+  25%      0.000000    7.910400
+  50%      0.000000   14.454200
+  75%      0.000000   31.000000
+  max      6.000000  512.329200
+#+END_EXAMPLE
 
 As we can see the data has quite a few not a number values. We would
 need to clean it, but first lets see how much of the data is actually
@@ -135,6 +162,15 @@ small $p-value$ indicates that we can confirm the null
 hypothesis. Even though $p-values$ are not very reliable in this small
 range we can confirm this with the rather small Pearson $r$
 coefficient of linear dependency.
+
+Knowing the relationship we can make the decision to fill in the NaN
+values. Typically, a choice has to be made between mean or median. In
+many applications involving statistical data there will be noise and
+this can affect the value which the mean provides. Hence, the median
+would often be picked. In our data, however, there is no noise since
+every column contains either categorical data or a limited number
+range -> age has no noise. For this reason, we pick to fill the values
+with the mean.
 
 #+BEGIN_SRC ipython :exports both :async t :results table :session
 train_data = train_data.drop(['Cabin'], axis=1)
