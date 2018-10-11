@@ -1,3 +1,4 @@
+
 #+TITLE: Titanic Kaggle Competition
 #+AUTHOR: Nikola Stoyanov
 #+EMAIL: nikola.stoyanov@postgrad.manchester.ac.uk
@@ -12,9 +13,9 @@ Keywords: Data Science, Kaggle, Machine Learning, Python
 
 * TODO Introduction
 
-* DONE Data Exploration
+* Data Exploration
 
-** DONE Imports
+** Imports
 Set the correct python environment for this problem.
 #+BEGIN_SRC emacs-lisp
 (setenv "PYTHONPATH" "~/anaconda3/envs/py36/bin/python")
@@ -36,7 +37,7 @@ sns.set(color_codes=True)
 
 #+RESULTS:
 
-** TODO Data Cleaning
+** Data Cleaning
 Import to files.
 #+BEGIN_SRC ipython :exports both :async t :results output :session
 train_data = pd.read_csv('~/git/kaggle_titanic/data/train.csv')
@@ -82,7 +83,7 @@ train_data.describe()
 
 #+RESULTS:
 #+begin_example
-# Out[33]:
+# Out[4]:
 #+BEGIN_EXAMPLE
   PassengerId    Survived      Pclass         Age       SibSp  \
   count   891.000000  891.000000  891.000000  714.000000  891.000000
@@ -104,6 +105,7 @@ train_data.describe()
   75%      0.000000   31.000000
   max      6.000000  512.329200
 #+END_EXAMPLE
+#+end_example
 
 As we can see the data has quite a few not a number values. We would
 need to clean it, but first lets see how much of the data is actually
@@ -139,11 +141,12 @@ NaN.
 As can be see 77% of the data in the Cabin column in NaN, 20% is in
 Age and a few entries in Embarked. The rest is clean.
 
-The available data which exists in the cabin column can introduce bias
-since it is likely to be from survivors. Let us quickly check that
-before we proceed. We are going to test the null hypothesis that there
-is no relationship between survived people and the availability of the
-cabin data. The way we can do this is using a Pearson test.
+One first though is that the available data which exists in the cabin
+column can introduce bias since it is likely to come from
+survivors. Let us quickly check that before we proceed. We are going
+to test the null hypothesis that there is no relationship between
+survived people and the availability of the cabin data. The way we can
+do this is using a Pearson test.
 
 #+BEGIN_SRC ipython :exports both :async t :results table :session
   from scipy.stats import pearsonr
@@ -157,30 +160,83 @@ cabin data. The way we can do this is using a Pearson test.
 
 #+end_example
 
-The results is a Pearson $r=0.317$ and a $p=3.09\times10^{-22}$. The
+The results are a Pearson $r=0.317$ and a $p=3.09\times10^{-22}$. The
 small $p-value$ indicates that we can confirm the null
-hypothesis. Even though $p-values$ are not very reliable in this small
-range we can confirm this with the rather small Pearson $r$
-coefficient of linear dependency.
+hypothesis. Even though $p-values$ are not very reliable with such a
+small data range we can be more certain considering the rather small
+Pearson $r$ coefficient of linear dependency. The conclusion is that,
+I am confident that there was no bias in the cabin data and I can hope
+that it can be infered from other features.
 
-Knowing the relationship we can make the decision to fill in the NaN
-values. Typically, a choice has to be made between mean or median. In
-many applications involving statistical data there will be noise and
-this can affect the value which the mean provides. Hence, the median
-would often be picked. In our data, however, there is no noise since
-every column contains either categorical data or a limited number
-range -> age has no noise. For this reason, we pick to fill the values
-with the mean.
+Now we move to the missing values in the age. We have two options on
+how to fill them. The lazy approach would be a choice between mean or
+median. In many applications involving statistical data there will be
+noise and outliers which affects the value the mean provides. Hence,
+the median would often be picked instead of the mean. In our data,
+however, there is no noise since the age column contains a limited
+number range i.e. age has no noise. For this reason, we can fill the
+values with the mean. We can see more confirmation here.
 
 #+BEGIN_SRC ipython :exports both :async t :results table :session
-train_data = train_data.drop(['Cabin'], axis=1)
-train_data = train_data.dropna(subset=['Age', 'Embarked'])
-(len(train_data) - train_data.count()) / len(train_data)
+train_data['Age'].describe()
 #+END_SRC
 
 #+RESULTS:
 #+begin_example
-# Out[7]:
+# Out[6]:
+#+BEGIN_EXAMPLE
+  count    714.000000
+  mean      29.699118
+  std       14.526497
+  min        0.420000
+  25%       20.125000
+  50%       28.000000
+  75%       38.000000
+  max       80.000000
+  Name: Age, dtype: float64
+#+END_EXAMPLE
+#+end_example
+
+The data shows that the minimum age is about 6 months and the maximum
+age is 80 years which tells us that no crazy outliers are hidding in
+the data to affect the mean. So the lazy approach can be done with
+filling the mean. However, we can hope for something better which
+leads us to option 2 - the smart approach. We can hope to find an
+estimate for the missing age values by looking at other features. I am
+an optimist and will go for option 2.
+
+Finally, the missing data in the embarked column is so small that I
+will just filter it out.
+
+#+BEGIN_SRC ipython :exports both :async t :results result :session
+train_data = train_data.drop(['Cabin'], axis=1)
+#+END_SRC
+
+#+RESULTS:
+: # Out[14]:
+
+To summarise the missing age and cabin values will be filled by
+looking at other features. Let's analyse the data now and see what
+they can be. Furhtermore, the analysis will help us later to engineer
+new features and hopefully make better predictions.
+
+** TODO Analysis
+Lets explore some of the data to get a sense of what is going on. We
+are going to look at the age, male/female, ticket fare, embarkment
+city and family data and how it relates to survivability.
+
+To facilitate the analysis we need to first remove the remaining
+missing values (before figuring out how to fill them). This can be
+done as below.
+
+#+BEGIN_SRC ipython :exports both :async t :results table :session
+clean_train_data = train_data.dropna(subset=['Age', 'Embarked'])
+(len(clean_train_data) - clean_train_data.count()) / len(clean_train_data)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+# Out[15]:
 #+BEGIN_EXAMPLE
   PassengerId    0.0
   Survived       0.0
@@ -195,54 +251,144 @@ train_data = train_data.dropna(subset=['Age', 'Embarked'])
   Embarked       0.0
   dtype: float64
 #+END_EXAMPLE
-
-The train data is clean. Lets check out test data now.
-
-#+BEGIN_SRC ipython :exports both :async t :results table :session
-test_data.head()
-#+END_SRC
-
-#+RESULTS:
-#+begin_example
-# Out[8]:
-#+BEGIN_EXAMPLE
-  PassengerId  Pclass                                          Name     Sex  \
-  0          892       3                              Kelly, Mr. James    male
-  1          893       3              Wilkes, Mrs. James (Ellen Needs)  female
-  2          894       2                     Myles, Mr. Thomas Francis    male
-  3          895       3                              Wirz, Mr. Albert    male
-  4          896       3  Hirvonen, Mrs. Alexander (Helga E Lindqvist)  female
-  
-  Age  SibSp  Parch   Ticket     Fare Cabin Embarked
-  0  34.5      0      0   330911   7.8292   NaN        Q
-  1  47.0      1      0   363272   7.0000   NaN        S
-  2  62.0      0      0   240276   9.6875   NaN        Q
-  3  27.0      0      0   315154   8.6625   NaN        S
-  4  22.0      1      1  3101298  12.2875   NaN        S
-#+END_EXAMPLE
 #+end_example
 
-#+BEGIN_SRC ipython :session :ipyfile /tmp/image.png :exports both :async t :results raw drawer
-(len(test_data) - test_data.count()) / len(test_data)
+*** Age
+We can start by exporing the relationship between age and
+survivability. We can make a null hypothesis assumption that the
+younger you are the more chance you have of survival. Having watched
+the Titanic movie this statement certainly makes sense in my head but
+we cannot blindly trust James Cameron can we?
+
+We can check if he did his homework by plotting the histograms of
+survival (0 Nope / 1 Yep) for age and then compare the kernel density
+estimate (KDE). From the KDE we can estimate the probability density
+function (PDF) of the the age-survival random variable.
+
+Lets plot the histograms. First the total distribution of all
+passangers and then the passangers than survived.
+
+#+BEGIN_SRC ipython :session :ipyfile img/sns_dist_age.png :exports both :async t :results raw drawer
+fig = plt.figure()
+sns.distplot(clean_train_data['Age'], bins=20, kde=False)
+fig.tight_layout()
+plt.show()
 #+END_SRC
 
 #+RESULTS:
 :RESULTS:
-# Out[183]:
-#+BEGIN_EXAMPLE
-  PassengerId    0.000000
-  Pclass         0.000000
-  Name           0.000000
-  Sex            0.000000
-  Age            0.205742
-  SibSp          0.000000
-  Parch          0.000000
-  Ticket         0.000000
-  Fare           0.002392
-  Cabin          0.782297
-  Embarked       0.000000
-  dtype: float64
-#+END_EXAMPLE
+# Out[17]:
+[[file:img/sns_dist_age.png]]
+:END:
+
+#+BEGIN_SRC ipython :session :ipyfile img/sns_dist_age_surv1.png :exports both :async t :results raw drawer
+fig = plt.figure()
+sns.distplot(clean_train_data['Age'][clean_train_data['Survived'] == 1], bins=20, kde=False)
+fig.tight_layout()
+plt.show()
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[18]:
+[[file:img/sns_dist_age_surv1.png]]
+:END:
+
+#+LATEX_ATTR: :placement [H]
+#+CAPTION: Age histogram of Survival = 1 from train data
+#+NAME: sns_dist_age_surv1
+
+To compute the KDE seaborn will put a Gaussian distribution centered
+at each bin with predefined parameters and then sum them. It will then
+normalize the result so that the integral is equal to unity. In a way
+it will smooth the data which is dictated by the bandwith parameter
+(bw in python). This is what controls the trade-off between the bias
+and variance of the estimator. We are going to leave the default
+bandwith here, see how well it works and determine if we need to play
+with it.
+
+Lets plot the two KDE and compare them.
+
+#+BEGIN_SRC ipython :session :ipyfile img/sns_kde_age.png :exports both :async t :results raw drawer
+fig = plt.figure()
+sns.kdeplot(clean_train_data['Age'], label='Total')
+sns.kdeplot(clean_train_data['Age'][clean_train_data['Survived'] == 1], label='Survived = 1')
+fig.tight_layout()
+plt.show()
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[19]:
+[[file:img/sns_kde_age.png]]
+:END:
+
+The integral of both curves is equal to unity so we can directly
+compare them. From the plot we can do a quick qualitative comparison
+(high/low) and what we can see is that:
+
+- Age < 10 (Group 1): High proportion survived,
+- 10 < Age < 30 (Group 2): Low proportion survived,
+- 30 < Age < 60 (Group 3): High proportion survived,
+- Age > 60 (Group 4): Low proportion survived.
+
+What this data tells us is that survivability is correlated with age
+in a categorical manner and not absolute. Or in other words people in
+Group 1 were prioratised, Group 2 and 3 were not prioratised and Group
+4 was in between. This statement certainly makes sense (thank you Mr
+Cameron), however, we need to look into the male/female distribution
+and the family relations in order to comment more on how this
+information can help us to fill the missing age values.
+
+*** TODO Male/Female
+
+#+BEGIN_SRC ipython :exports both :async t :results output :session
+
+#+END_SRC
+
+*** TODO Family
+
+*** TODO Ticket Fare
+#+BEGIN_SRC ipython :session :ipyfile img/ticket_price_age.png :exports both :async t :results raw drawer
+fig = plt.figure()
+sns.jointplot(data=train_data, x='Age', y='Fare', kind='reg')
+fig.tight_layout()
+plt.show()
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[175]:
+[[file:img/ticket_price_age.png]]
+:END:
+
+#+BEGIN_SRC ipython :session :ipyfile img/ticket_fare.png :exports both :async t :results raw drawer
+fig = plt.figure()
+g = sns.FacetGrid(train_data, row='Survived', col='Pclass')
+g.map(sns.distplot, "Age")
+fig.tight_layout()
+plt.show()
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[176]:
+[[file:img/ticket_fare.png]]
+:END:
+
+
+*** TODO Correlation
+#+BEGIN_SRC ipython :session :ipyfile img/corr_heatmap.png :exports both :async t :results raw drawer
+fig = plt.figure()
+sns.heatmap(train_data.corr(), annot=True, fmt=".2f")
+fig.tight_layout()
+plt.show()
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+# Out[177]:
+[[file:img/corr_heatmap.png]]
 :END:
 
 ** TODO Data Standartisation
@@ -319,127 +465,8 @@ categorical features! Next lets create the one-hot encoder and
 transform the values.
 
 *** TODO Make the data to a gaussian with zero mean and unit variance.
-** TODO Analysis
-Lets explore some of the data to get a sense of what is going on. We are going to look at the age, male/female, ticket fare, embarkment city and
-family data and how it relates to survivability.
 
-*** Age
-We can start by exporing the relationship between age and survivability. We can make a null hypothesis assumption that
-the younger you are the more chance you have of survival. Lets see if this statement makes sense.
-
-We can do this by plotting the histograms of survival (0/1) for age and then compare the kernel density estimate (KDE).
-From the KDE we can estimate the probability density function (PDF) of the random variable we are exploring.
-
-Lets plot the histograms. First the total distribution of all passangers and then the passangers than survived.
-#+BEGIN_SRC ipython :session :ipyfile img/sns_dist_age.png :exports both :async t :results raw drawer
-fig = plt.figure()
-sns.distplot(train_data['Age'], bins=20, kde=False)
-fig.tight_layout()
-plt.show()
-#+END_SRC
-
-#+RESULTS:
-:RESULTS:
-# Out[172]:
-[[file:img/sns_dist_age.png]]
-:END:
-
-#+BEGIN_SRC ipython :session :ipyfile img/sns_dist_age_surv1.png :exports both :async t :results raw drawer
-fig = plt.figure()
-sns.distplot(train_data['Age'][train_data['Survived'] == 1], bins=20, kde=False)
-fig.tight_layout()
-plt.show()
-#+END_SRC
-
-#+RESULTS:
-:RESULTS:
-# Out[173]:
-[[file:img/sns_dist_age_surv1.png]]
-:END:
-
-#+LATEX_ATTR: :placement [H]
-#+CAPTION: Age histogram of Survival = 1 from train data
-#+NAME: sns_dist_age_surv1
-To compute the KDE seaborn will put a Gaussian distribution centered at each bin and then
-sum them. It will then normalize the result so that the integral is 1. In a way it will
-smooth the data - this is determined by the bandwith parameter (bw in python). This is what controls
-the trade-off between the bias and variance of the estimator. We are going to leave the default bandwith here.
-
-Lets plot the two KDE and compare them.
-
-#+BEGIN_SRC ipython :session :ipyfile img/sns_kde_age.png :exports both :async t :results raw drawer
-fig = plt.figure()
-sns.kdeplot(train_data['Age'], label='Total')
-sns.kdeplot(train_data['Age'][train_data['Survived'] == 1], label='Survived = 1')
-fig.tight_layout()
-plt.show()
-#+END_SRC
-
-#+RESULTS:
-:RESULTS:
-# Out[174]:
-[[file:img/sns_kde_age.png]]
-:END:
-
-The integral of both curves is 1 so we can directly compare them. From the plot we can do a quick qualitative comparison (high/low)
-and what we can see is that:
-
-- Age < 10 (Group 1): High proportion survived,
-- 10 < Age < 30 (Group 2): Low proportion survived,
-- 30 < Age < 60 (Group 3): High proportion survived,
-- Age > 60 (Group 4): Low proportion survived.
-
-What this data tells us is that survivability is correlated with age in a categorical manner and not absolute. Or in other words
-people in Group 1 were prioratised, Group 2 and 3 were not prioratised and Group 4 was in between. This statement certainly makes sense,
-however, we need to look into the male/female distribution and the family relations in order to comment more.
-
-*** Male/Female
-Next
-
-*** Family
-
-*** Ticket Fare
-#+BEGIN_SRC ipython :session :ipyfile img/ticket_price_age.png :exports both :async t :results raw drawer
-fig = plt.figure()
-sns.jointplot(data=train_data, x='Age', y='Fare', kind='reg')
-fig.tight_layout()
-plt.show()
-#+END_SRC
-
-#+RESULTS:
-:RESULTS:
-# Out[175]:
-[[file:img/ticket_price_age.png]]
-:END:
-
-#+BEGIN_SRC ipython :session :ipyfile img/ticket_fare.png :exports both :async t :results raw drawer
-fig = plt.figure()
-g = sns.FacetGrid(train_data, row='Survived', col='Pclass')
-g.map(sns.distplot, "Age")
-fig.tight_layout()
-plt.show()
-#+END_SRC
-
-#+RESULTS:
-:RESULTS:
-# Out[176]:
-[[file:img/ticket_fare.png]]
-:END:
-
-
-*** Correlation
-#+BEGIN_SRC ipython :session :ipyfile img/corr_heatmap.png :exports both :async t :results raw drawer
-fig = plt.figure()
-sns.heatmap(train_data.corr(), annot=True, fmt=".2f")
-fig.tight_layout()
-plt.show()
-#+END_SRC
-
-#+RESULTS:
-:RESULTS:
-# Out[177]:
-[[file:img/corr_heatmap.png]]
-:END:
+* TODO Feature Engineering
 
 * TODO Logistic Regression Functions
 Since we are going to explore different classification algorithms
