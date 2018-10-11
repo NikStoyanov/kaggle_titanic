@@ -342,7 +342,24 @@ information can help us to fill the missing age values.
 
 *** TODO Male/Female
 
-#+BEGIN_SRC ipython :exports both :async t :results output :session
+#+BEGIN_SRC ipython :exports both :async t :results table :session
+clean_train_data['Sex'].head()
+#+END_SRC
+
+#+RESULTS:
+: # Out[23]:
+: #+BEGIN_EXAMPLE
+:   0      male
+:   1    female
+:   2    female
+:   3    female
+:   4      male
+:   Name: Sex, dtype: object
+: #+END_EXAMPLE
+
+#+end_example
+
+#+BEGIN_SRC ipython :session :ipyfile img/sns_dist_gender.png :exports both :async t :results raw drawer
 
 #+END_SRC
 
@@ -467,7 +484,7 @@ transform the values.
 *** TODO Make the data to a gaussian with zero mean and unit variance.
 
 * TODO Feature Engineering
-
+  Sex (male/female) to 0/1
 * TODO Logistic Regression Functions
 Since we are going to explore different classification algorithms
 we need to have easy access to perform the checks. Lets write some
