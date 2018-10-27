@@ -12,7 +12,10 @@ Keywords: Data Science, Kaggle, Machine Learning, Python
 #+END_PREVIEW
 
 * TODO Introduction
-
+- Characterise the behaviour by exploring the data
+- Formulate the computational problem from the characterisation
+- Propose and implement computational solutions
+- Discuss the results
 * Data Exploration
 
 ** Imports
